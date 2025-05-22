@@ -58,6 +58,7 @@ def throwEquationSyntaxErrorWIndex(equation_input : str,  index : int, errorDesc
 
 def process_input_str(input_str : str) -> list:
     # print(f"{input_str=}")
+    input_str = input_str.replace(" ", "")
     output = []
 
     lastSpecialCharIdx = -1
