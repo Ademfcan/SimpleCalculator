@@ -1,6 +1,6 @@
 from trie import Trie
 from backedlist import BackedList
-from operators import binaryoperators, unaryoperators, separators, openSeparator, closeSeparator, negationChar
+from operators import binaryoperators, unaryoperators, separators, openSeparator, closeSeparator, negationChar, constants
 from nodes import BinaryOpNode, UnaryOpNode, ConstantNode, ValueNode, Node
 
 operatorTrie = Trie()
@@ -144,19 +144,23 @@ class Calculator:
 
             elif is_binary:
                 if last_binary_op == i-1:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset, "Multiple Binary Operators in a Row!")
+                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Multiple Binary Operators in a Row!")
 
                 if i == 0 or i == len(tokenized_str)-1:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset, "Invalid Binary Operator!")
+                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Binary Operator!")
                 
 
                 last_binary_op = i
             elif is_expected_numeric:
-                #  try conversion to float
-                try:
-                    tokenized_str[i] = ConstantNode(float(value))
-                except ValueError:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset, f"Failed to convert: {value}!")
+                # check if constant
+                if value in constants.keys():
+                    tokenized_str[i] = ConstantNode(constants[value])
+                else:
+                    #  try conversion to float
+                    try:
+                        tokenized_str[i] = ConstantNode(float(value))
+                    except ValueError:
+                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {value}!")
             elif is_unary:
                 # ops args, are next value
                 tokenized_str[i] = UnaryOpNode(value, tokenized_str[i+1], self.evaluate)
@@ -166,7 +170,7 @@ class Calculator:
             i += 1
 
         if separator_lvl != 0:
-            self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset, "Invalid Separator Level!")
+            self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separator Level!")
 
         return tokenized_str    
         

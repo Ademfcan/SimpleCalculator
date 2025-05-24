@@ -18,6 +18,13 @@ unaryoperators = {
     "log": {"f": np.log}
 }
 
+constants = {
+    "pi": np.pi,
+    "e": np.e,
+    "eps": 1/np.inf,
+    "inf": np.inf
+}
+
 negationChar = "-"
 
 openSeparator = "("
