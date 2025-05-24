@@ -83,18 +83,46 @@ class Calculator:
                 if operatorstr in unaryoperators.keys():
                     # all unary ops must be wrapped in two separator
                     # op(args)
-                    startsep = input_str.find(openSeparator, i)
-                    endsep = input_str.find(closeSeparator, i+2) # skip expected opening separator, and at least one char of input
+                    
+                    if i > input_len-3:
+                        # not enough space for args
+                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "Missing Operator separators!")
 
-                    if startsep == -1 or endsep == -1:
+                    starti = i
+                    i += 1
+                    if input_str[i] != openSeparator:
+                        # should immdiately start with open sep
                         self.__throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
 
+                    endsep = None
+
+                    i += 1
+                    # find next close separator
+                    separatorLvl = 1
+                    while i < input_len and separatorLvl != 0:
+                        next_c = input_str[i]
+                        if next_c == openSeparator:
+                            separatorLvl+=1
+                        elif next_c == closeSeparator:
+                            endsep = i
+                            separatorLvl-=1
+
+                        i += 1
+
+                    if separatorLvl != 0:
+                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
+
+                    if endsep is None:
+                        # not found
+                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "No closing separator!")
+
+
                     # slice from [op(args)]
-                    startslice = i-len(operatorstr)+1
+                    startslice = starti-len(operatorstr)+1
                     endslice = endsep+1
 
-                    backedList.addChunk(startslice, i+1)
-                    backedList.addChunk(i+1, endslice)
+                    backedList.addChunk(startslice, starti+1)
+                    backedList.addChunk(starti+1, endslice)
                     i = endslice
 
                 elif operatorstr in binaryoperators.keys():
@@ -109,6 +137,17 @@ class Calculator:
                 lastOperatorIdx = i-1 # due to custom incrementation
                 operatorbuffer = None # reset
                 continue
+
+            elif opmatch == 0:
+                # no match
+                # this means if we had items in the buffer, the addition of the new char c caused it to stop matching
+                # try c as its own
+                if operatorbuffer is not None:
+                    operatorbuffer = None
+                    continue
+                else:
+                    # proceed as normal
+                    pass
 
             if c in separators:
                 backedList.addChunkI(i)
@@ -254,7 +293,7 @@ class Calculator:
         if isinstance(node, ConstantNode):
             return node
     
-    def evaluate(self, input_str, debug: bool = True) -> ConstantNode:
+    def evaluate(self, input_str, debug: bool = False) -> ConstantNode:
         tokens = self.tokenize_input_string(input_str)
         if debug:
             print(f"{tokens=}")
@@ -265,7 +304,8 @@ class Calculator:
         if debug:
             self.printroot(tree)
         result = self.collapse(tree)
-        print(f"{result.getValue()=}")
+        if debug:
+            print(f"{result.getValue()=}")
 
         return result
 
@@ -276,7 +316,7 @@ def repl():
     while True:
         input_str = input("Please enter your equation>>> ")
         try:
-            result = c.evaluate(input_str).getValue()
+            result = c.evaluate(input_str, debug=False).getValue()
             print(f"Result: {result}")
 
         except SyntaxError as e:

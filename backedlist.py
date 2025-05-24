@@ -21,7 +21,6 @@ class BackedList:
 
         prev_end = 0
         for chunk_range in sorted(self.data.keys()):
-            print(chunk_range)
             start, end = chunk_range
             chunk_str = self.data[chunk_range]
 

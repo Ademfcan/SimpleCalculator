@@ -15,7 +15,10 @@ unaryoperators = {
     "sin": {"f": np.sin},
     "cos": {"f": np.cos},
     "tan": {"f": np.tan},
-    "log": {"f": np.log}
+    "log": {"f": np.log},
+    "asin": {"f": np.asin},
+    "acos": {"f": np.acos},
+    "atan": {"f": np.atan},
 }
 
 constants = {
