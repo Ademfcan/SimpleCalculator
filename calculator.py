@@ -1,3 +1,4 @@
+import numpy as np
 from trie import Trie
 from backedlist import BackedList
 from operators import binaryoperators, unaryoperators, separators, openSeparator, closeSeparator, negationChar, constants
@@ -292,8 +293,17 @@ class Calculator:
         
         if isinstance(node, ConstantNode):
             return node
+        
+    def clip_output(self, output : float):
+        if np.isclose(output, 0):
+            return 0
+        if np.isclose(output, np.inf):
+            return np.inf
+        
+        return output
+
     
-    def evaluate(self, input_str, debug: bool = False) -> ConstantNode:
+    def evaluate(self, input_str, debug: bool = False) -> float:
         tokens = self.tokenize_input_string(input_str)
         if debug:
             print(f"{tokens=}")
@@ -303,9 +313,9 @@ class Calculator:
         tree = self.to_tree(processed)
         if debug:
             self.printroot(tree)
-        result = self.collapse(tree)
+        result = self.clip_output(self.collapse(tree).getValue())
         if debug:
-            print(f"{result.getValue()=}")
+            print(f"{result=}")
 
         return result
 
@@ -316,7 +326,7 @@ def repl():
     while True:
         input_str = input("Please enter your equation>>> ")
         try:
-            result = c.evaluate(input_str, debug=False).getValue()
+            result = c.evaluate(input_str, debug=False)
             print(f"Result: {result}")
 
         except SyntaxError as e:

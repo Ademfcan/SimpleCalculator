@@ -28,7 +28,7 @@ class UnaryOpNode(ValueNode):
         self.argument = argument_wparen[1:-1]
 
     def getValue(self):
-        return self.func(self.recursive_evaluate_func(self.argument).getValue())
+        return self.func(self.recursive_evaluate_func(self.argument))
     
 
 class BinaryOpNode(Node):
