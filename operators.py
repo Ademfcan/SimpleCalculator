@@ -43,7 +43,7 @@ def factorialWrapper(input_f : float) -> float:
 
 # one char only!
 tailmodifiers = {
-    "!": factorialWrapper
+    "!": factorialWrapper,
 }
 
 

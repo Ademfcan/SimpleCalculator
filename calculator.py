@@ -182,6 +182,10 @@ class Calculator:
                 else:
                     separator_lvl -= 1
 
+                if separator_lvl < 0:
+                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separators!!")
+
+
             elif is_binary:
                 if last_binary_op == i-1:
                     self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Multiple Binary Operators in a Row!")
@@ -214,7 +218,7 @@ class Calculator:
             elif is_unary:
                 # ops args, are next value
                 tokenized_str[i] = UnaryOpNode(value, tokenized_str[i+1], self.evaluate)
-                # remove the next token
+                # remove the next token, as we are using it immediately
                 del tokenized_str[i+1]
             
             i += 1
@@ -335,8 +339,11 @@ def repl():
 
     while True:
         input_str = input("Please enter your equation>>> ")
-        if not input_str.replace(" ", ""):
-            print("Please enter a valid expression.")
+        stripped = input_str.replace(" ", "")\
+                .replace(operators.openSeparator, "")\
+                .replace(operators.closeSeparator, "")
+        if not stripped:
+            print("Please enter a valid non-empty expression!")
         else:
             try:
                 result = c.evaluate(input_str, debug=False)
