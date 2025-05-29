@@ -1,15 +1,15 @@
 import numpy as np
 from trie import Trie
 from backedlist import BackedList
-from operators import binaryoperators, unaryoperators, separators, openSeparator, closeSeparator, negationChar, constants
+import operators
 from nodes import BinaryOpNode, UnaryOpNode, ConstantNode, ValueNode, Node
 
 operatorTrie = Trie()
 
-for op in unaryoperators.keys():
+for op in operators.unaryoperators.keys():
     operatorTrie.put(op)
 
-for op in binaryoperators.keys():
+for op in operators.binaryoperators.keys():
     operatorTrie.put(op)
 
 
@@ -81,7 +81,7 @@ class Calculator:
                 continue
             elif opmatch == 2:
                 # full match
-                if operatorstr in unaryoperators.keys():
+                if operatorstr in operators.unaryoperators.keys():
                     # all unary ops must be wrapped in two separator
                     # op(args)
                     
@@ -91,7 +91,7 @@ class Calculator:
 
                     starti = i
                     i += 1
-                    if input_str[i] != openSeparator:
+                    if input_str[i] != operators.openSeparator:
                         # should immdiately start with open sep
                         self.__throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
 
@@ -102,9 +102,9 @@ class Calculator:
                     separatorLvl = 1
                     while i < input_len and separatorLvl != 0:
                         next_c = input_str[i]
-                        if next_c == openSeparator:
+                        if next_c == operators.openSeparator:
                             separatorLvl+=1
-                        elif next_c == closeSeparator:
+                        elif next_c == operators.closeSeparator:
                             endsep = i
                             separatorLvl-=1
 
@@ -126,9 +126,9 @@ class Calculator:
                     backedList.addChunk(starti+1, endslice)
                     i = endslice
 
-                elif operatorstr in binaryoperators.keys():
+                elif operatorstr in operators.binaryoperators.keys():
                     # binary op can be independednt
-                    is_special_subtr = operatorstr == negationChar and (i == 0 or lastOperatorIdx == i-1)
+                    is_special_subtr = operatorstr == operators.negationChar and (i == 0 or lastOperatorIdx == i-1)
 
                     if not is_special_subtr:
                         backedList.addChunk(i-len(operatorstr)+1, i+1)
@@ -150,7 +150,7 @@ class Calculator:
                     # proceed as normal
                     pass
 
-            if c in separators:
+            if c in operators.separators:
                 backedList.addChunkI(i)
 
 
@@ -171,13 +171,13 @@ class Calculator:
             value = tokenized_str[i]
             idx_offset += len(value)
 
-            is_separator = value in separators
-            is_binary = value in binaryoperators.keys()
-            is_unary = value in unaryoperators.keys()
+            is_separator = value in operators.separators
+            is_binary = value in operators.binaryoperators.keys()
+            is_unary = value in operators.unaryoperators.keys()
             is_expected_numeric = not any([is_separator, is_binary, is_unary])
 
             if is_separator:
-                if value == openSeparator:
+                if value == operators.openSeparator:
                     separator_lvl += 1
                 else:
                     separator_lvl -= 1
@@ -193,14 +193,24 @@ class Calculator:
                 last_binary_op = i
             elif is_expected_numeric:
                 # check if constant
-                if value in constants.keys():
-                    tokenized_str[i] = ConstantNode(constants[value])
+                if value in operators.constants.keys():
+                    tokenized_str[i] = ConstantNode(operators.constants[value])
+                elif value[-1:] in operators.tailmodifiers:
+                    func = operators.tailmodifiers[value[-1:]]
+
+                    #  try conversion to float before applying tail operator
+                    try:
+                        value_f = float(value[:-1])
+                    except ValueError:
+                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-2, f"Failed to convert: {value[:-1]} !")
+                    
+                    tokenized_str[i] = ConstantNode(func(value_f))
                 else:
                     #  try conversion to float
                     try:
                         tokenized_str[i] = ConstantNode(float(value))
                     except ValueError:
-                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {value}!")
+                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {value} !")
             elif is_unary:
                 # ops args, are next value
                 tokenized_str[i] = UnaryOpNode(value, tokenized_str[i+1], self.evaluate)
@@ -222,14 +232,14 @@ class Calculator:
 
         for i in range(len(processed_input)):
             val = processed_input[i]
-            if val in separators:
-                if val == openSeparator:
+            if val in operators.separators:
+                if val == operators.openSeparator:
                     separatorLevel+=1
                 else:
                     separatorLevel-=1
                 continue
 
-            if type(val) == str and val in binaryoperators.keys():
+            if type(val) == str and val in operators.binaryoperators.keys():
                 # op1 is guaranteed to be updated before we see an operator
                 operator = BinaryOpNode(val, separatorLevel, i, op1)
 
@@ -325,12 +335,18 @@ def repl():
 
     while True:
         input_str = input("Please enter your equation>>> ")
-        try:
-            result = c.evaluate(input_str, debug=False)
-            print(f"Result: {result}")
+        if not input_str.replace(" ", ""):
+            print("Please enter a valid expression.")
+        else:
+            try:
+                result = c.evaluate(input_str, debug=False)
+                print(f"Result: {result}")
 
-        except SyntaxError as e:
-            print(f"Failed to parse input!: \n{e.__class__.__name__}: {e}")
+            except SyntaxError as e:
+                print(f"Failed to parse input!: \n{e.__class__.__name__}: {e}")
+
+            except KeyboardInterrupt as e:
+                print("Exiting Program...")
 
 
 
