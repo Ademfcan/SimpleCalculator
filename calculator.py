@@ -199,14 +199,15 @@ class Calculator:
                 # check if constant
                 if value in operators.constants.keys():
                     tokenized_str[i] = ConstantNode(operators.constants[value])
-                elif value[-1:] in operators.tailmodifiers:
+                # check if some value with a tail modifier: value[tailmodifier]
+                elif len(value) > 1 and value[-1:] in operators.tailmodifiers:
                     func = operators.tailmodifiers[value[-1:]]
 
                     #  try conversion to float before applying tail operator
                     try:
                         value_f = float(value[:-1])
                     except ValueError:
-                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-2, f"Failed to convert: {value[:-1]} !")
+                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-2, f"Failed to convert: {{{value[:-1]}}} !")
                     
                     tokenized_str[i] = ConstantNode(func(value_f))
                 else:
@@ -214,7 +215,7 @@ class Calculator:
                     try:
                         tokenized_str[i] = ConstantNode(float(value))
                     except ValueError:
-                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {value} !")
+                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {{{value}}} !")
             elif is_unary:
                 # ops args, are next value
                 tokenized_str[i] = UnaryOpNode(value, tokenized_str[i+1], self.evaluate)
