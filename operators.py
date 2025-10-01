@@ -12,6 +12,10 @@ binaryoperators = {
     "/": {"p": 1, "f": np.divide},
     "%": {"p": 1, "f": lambda a, b : a % b},
     "^": {"p": 2, "f": np.pow},
+    # "or": {"p": 2, "f": lambda a, b : a or b},
+    # "and": {"p": 2, "f": lambda a, b : a and b},
+    # "xor": {"p": 2, "f": lambda a, b : int(a) ^ int(b)},
+    # "implies": {"p": 2, "f": lambda a, b : int((not a) or b)},
 }
 
 unaryoperators = {
@@ -25,6 +29,9 @@ unaryoperators = {
     "acos": {"f": np.acos},
     "atan": {"f": np.atan},
     "sqrt": {"f": np.sqrt},
+    "abs": {"f": np.abs},
+    "neg": {"f": np.negative},
+    "nand": {"f": lambda a : int(not a)},
 }
 
 constants = {
@@ -58,9 +65,9 @@ separators = {openSeparator, closeSeparator}
 
 
 # assert binary operators are single char
-for binaryop in binaryoperators.keys():
-    if len(binaryop) > 1:
-        raise AssertionError(f"All Binary Operators must be one char only!\n{binaryop} is not!")
+# for binaryop in binaryoperators.keys():
+#     if len(binaryop) > 1:
+#         raise AssertionError(f"All Binary Operators must be one char only!\n{binaryop} is not!")
 
 # assert tail modifiers are single char
 for tailmodifier in tailmodifiers.keys():
