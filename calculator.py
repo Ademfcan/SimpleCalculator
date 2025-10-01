@@ -61,7 +61,7 @@ class Calculator:
     def tokenize_input_string(self, input_str : str) -> list[str]:
         input_str = input_str.replace(" ", "")
         backedList = BackedList(input_str)
-        lastOperatorIdx = -1
+        lastTokenOperator = False
         operatorbuffer = None
 
         input_len = len(input_str)
@@ -125,17 +125,18 @@ class Calculator:
                     backedList.addChunk(startslice, starti+1)
                     backedList.addChunk(starti+1, endslice)
                     i = endslice
+                    lastTokenOperator = False
 
                 elif operatorstr in operators.binaryoperators.keys():
                     # binary op can be independednt
-                    is_special_subtr = operatorstr == operators.negationChar and (i == 0 or lastOperatorIdx == i-1)
+                    is_special_subtr = operatorstr == operators.negationChar and (i == 0 or lastTokenOperator)
 
                     if not is_special_subtr:
                         backedList.addChunk(i-len(operatorstr)+1, i+1)
                     
                     i += 1
 
-                lastOperatorIdx = i-1 # due to custom incrementation
+                lastTokenOperator = True
                 operatorbuffer = None # reset
                 continue
 
@@ -146,13 +147,14 @@ class Calculator:
                 if operatorbuffer is not None:
                     operatorbuffer = None
                     continue
-                else:
-                    # proceed as normal
-                    pass
+                # else proceed as normal
 
+            # separators are not tokens, just for adjusting order of operations
             if c in operators.separators:
                 backedList.addChunkI(i)
-
+            else:
+                lastTokenOperator = False
+                # normal char, part of a number/constant
 
             i += 1
         
@@ -347,7 +349,7 @@ def repl():
             print("Please enter a valid non-empty expression!")
         else:
             try:
-                result = c.evaluate(input_str, debug=False)
+                result = c.evaluate(input_str, debug=True)
                 print(f"Result: {result}")
 
             except SyntaxError as e:
