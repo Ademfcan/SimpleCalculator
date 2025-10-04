@@ -1,16 +1,11 @@
+from typing import Callable
+
 import numpy as np
-from trie import Trie
-from backedlist import BackedList
-import operators
-from nodes import BinaryOpNode, UnaryOpNode, ConstantNode, ValueNode, Node
 
-operatorTrie = Trie()
-
-for op in operators.unaryoperators.keys():
-    operatorTrie.put(op)
-
-for op in operators.binaryoperators.keys():
-    operatorTrie.put(op)
+from ._trie import Trie
+from ._utils import _throwEquationSyntaxErrorWIndex
+from ._nodes import Node, ValueNode, ConstantNode, UnaryOpNode, BinaryOpNode
+from ._backedlist import BackedList
 
 
 
@@ -50,13 +45,82 @@ a^b*c+d -> ^ab+*cd
       (b)(c)
 """
 
-class Calculator:
-    def __init__(self):
-        pass
 
-    def __throwEquationSyntaxErrorWIndex(self, equation_input : str,  index : int, errorDescription : str = "error here"):
-        raise SyntaxError(f"{equation_input} is not a valid equation!\n"+
-                          f"{len(SyntaxError.__name__ + ": ") * " "}{"~"*index}^ {errorDescription}")
+class CalculatorBuilder:
+    def __init__(self):
+        self.binaryoperators = {}
+        self.unaryoperators = {}
+        self.constants = {}
+        self.suffixoperators = {}
+
+        # default values
+        self.negationChar = "-"
+        self.openSeparator = "("
+        self.closeSeparator = ")"
+
+    def addBinaryOperator(self, symbol : str, precedence : int, func : Callable[[float, float], float]):
+        self.binaryoperators[symbol] = {"p": precedence, "f": func}
+
+    def addUnaryOperator(self, symbol : str, func : Callable[[float], float]):
+        self.unaryoperators[symbol] = {"f": func}
+
+    def addConstant(self, name : str, value : float):
+        self.constants[name] = value
+
+    def addSuffixOperator(self, symbol : str, func : Callable[[float], float]):
+        if len(symbol) != 1:
+            raise ValueError("Suffix operator symbol must be a single character!")
+        self.suffixoperators[symbol] = {"f": func}
+
+    def setNegationChar(self, symbol : str):
+        if len(symbol) != 1:
+            raise ValueError("Negation character must be a single character!")
+        self.negationChar = symbol
+
+    def setSeparators(self, openSep : str, closeSep : str): 
+        if len(openSep) != 1 or len(closeSep) != 1:
+            raise ValueError("Separators must be a single character!")
+        self.openSeparator = openSep
+        self.closeSeparator = closeSep
+
+    def build(self) -> "Calculator":
+        if len(self.binaryoperators) == 0:
+            raise ValueError("Must have at least one binary operator!")
+
+        return Calculator(binaryoperators=self.binaryoperators,
+                          unaryoperators=self.unaryoperators,
+                          constants=self.constants,
+                          suffixoperators=self.suffixoperators,
+                          negationChar=self.negationChar,
+                          openSeparator=self.openSeparator,
+                          closeSeparator=self.closeSeparator)
+
+class Calculator:
+    def __init__(self, 
+        binaryoperators : dict, 
+        unaryoperators : dict, 
+        constants : dict, 
+        suffixoperators : dict, 
+        negationChar : str, 
+        openSeparator : str, 
+        closeSeparator : str):
+        self.binaryoperators = binaryoperators
+        self.unaryoperators = unaryoperators
+        self.constants = constants
+        self.suffixoperators = suffixoperators
+
+        self.negationChar = negationChar
+        self.openSeparator = openSeparator
+        self.closeSeparator = closeSeparator
+        self.separators = {self.openSeparator, self.closeSeparator}
+
+        self.operatorTrie = Trie()
+
+        for op in self.binaryoperators.keys():
+            self.operatorTrie.put(op)
+
+        for op in self.unaryoperators.keys():
+            self.operatorTrie.put(op)
 
     def tokenize_input_string(self, input_str : str) -> list[str]:
         input_str = input_str.replace(" ", "")
@@ -72,7 +136,7 @@ class Calculator:
 
             # check match against operators
             operatorstr = operatorbuffer + c if operatorbuffer is not None else c
-            opmatch = operatorTrie.isIn(operatorstr)
+            opmatch = self.operatorTrie.isIn(operatorstr)
 
             if opmatch == 1:
                 # partial match
@@ -81,19 +145,19 @@ class Calculator:
                 continue
             elif opmatch == 2:
                 # full match
-                if operatorstr in operators.unaryoperators.keys():
+                if operatorstr in self.unaryoperators.keys():
                     # all unary ops must be wrapped in two separator
                     # op(args)
                     
                     if i > input_len-3:
                         # not enough space for args
-                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "Missing Operator separators!")
+                        _throwEquationSyntaxErrorWIndex(input_str, i, "Missing Operator separators!")
 
                     starti = i
                     i += 1
-                    if input_str[i] != operators.openSeparator:
+                    if input_str[i] != self.openSeparator:
                         # should immdiately start with open sep
-                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
+                        _throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
 
                     endsep = None
 
@@ -102,20 +166,20 @@ class Calculator:
                     separatorLvl = 1
                     while i < input_len and separatorLvl != 0:
                         next_c = input_str[i]
-                        if next_c == operators.openSeparator:
+                        if next_c == self.openSeparator:
                             separatorLvl+=1
-                        elif next_c == operators.closeSeparator:
+                        elif next_c == self.closeSeparator:
                             endsep = i
                             separatorLvl-=1
 
                         i += 1
 
                     if separatorLvl != 0:
-                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
+                        _throwEquationSyntaxErrorWIndex(input_str, i, "Invalid operator separators!")
 
                     if endsep is None:
                         # not found
-                        self.__throwEquationSyntaxErrorWIndex(input_str, i, "No closing separator!")
+                        _throwEquationSyntaxErrorWIndex(input_str, i, "No closing separator!")
 
 
                     # slice from [op(args)]
@@ -127,9 +191,9 @@ class Calculator:
                     i = endslice
                     lastTokenOperator = False
 
-                elif operatorstr in operators.binaryoperators.keys():
-                    # binary op can be independednt
-                    is_special_subtr = operatorstr == operators.negationChar and (i == 0 or lastTokenOperator)
+                elif operatorstr in self.binaryoperators.keys():
+                    # this handles special case of negation, where you might have possibly defined a character for negation, and it might be the same as a binary operator
+                    is_special_subtr = operatorstr == self.negationChar and (i == 0 or lastTokenOperator)
 
                     if not is_special_subtr:
                         backedList.addChunk(i-len(operatorstr)+1, i+1)
@@ -150,7 +214,7 @@ class Calculator:
                 # else proceed as normal
 
             # separators are not tokens, just for adjusting order of operations
-            if c in operators.separators:
+            if c in self.separators:
                 backedList.addChunkI(i)
             else:
                 lastTokenOperator = False
@@ -173,43 +237,43 @@ class Calculator:
             value = tokenized_str[i]
             idx_offset += len(value)
 
-            is_separator = value in operators.separators
-            is_binary = value in operators.binaryoperators.keys()
-            is_unary = value in operators.unaryoperators.keys()
+            is_separator = value in self.separators
+            is_binary = value in self.binaryoperators.keys()
+            is_unary = value in self.unaryoperators.keys()
             is_expected_numeric = not any([is_separator, is_binary, is_unary])
 
             if is_separator:
-                if value == operators.openSeparator:
+                if value == self.openSeparator:
                     separator_lvl += 1
                 else:
                     separator_lvl -= 1
 
                 if separator_lvl < 0:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separators!!")
+                    _throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separators!!")
 
 
             elif is_binary:
                 if last_binary_op == i-1:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Multiple Binary Operators in a Row!")
+                    _throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Multiple Binary Operators in a Row!")
 
                 if i == 0 or i == len(tokenized_str)-1:
-                    self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Binary Operator!")
+                    _throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Binary Operator!")
                 
 
                 last_binary_op = i
             elif is_expected_numeric:
                 # check if constant
-                if value in operators.constants.keys():
-                    tokenized_str[i] = ConstantNode(operators.constants[value])
-                # check if some value with a tail modifier: value[tailmodifier]
-                elif len(value) > 1 and value[-1:] in operators.tailmodifiers:
-                    func = operators.tailmodifiers[value[-1:]]
+                if value in self.constants.keys():
+                    tokenized_str[i] = ConstantNode(self.constants[value])
+                # check if some value with a suffix operator: value[suffixoperator]
+                elif len(value) > 1 and value[-1:] in self.suffixoperators.keys():
+                    func = self.suffixoperators[value[-1:]]
 
-                    #  try conversion to float before applying tail operator
+                    #  try conversion to float before applying suffix operator
                     try:
                         value_f = float(value[:-1])
                     except ValueError:
-                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-2, f"Failed to convert: {{{value[:-1]}}} !")
+                        _throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-2, f"Failed to convert: {{{value[:-1]}}} !")
                     
                     tokenized_str[i] = ConstantNode(func(value_f))
                 else:
@@ -217,17 +281,17 @@ class Calculator:
                     try:
                         tokenized_str[i] = ConstantNode(float(value))
                     except ValueError:
-                        self.__throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {{{value}}} !")
+                        _throwEquationSyntaxErrorWIndex(raw_input_str , idx_offset-1, f"Failed to convert: {{{value}}} !")
             elif is_unary:
                 # ops args, are next value
-                tokenized_str[i] = UnaryOpNode(value, tokenized_str[i+1], self.evaluate)
+                tokenized_str[i] = UnaryOpNode(value, self.unaryoperators[value]["f"], tokenized_str[i+1], self.calculate)
                 # remove the next token, as we are using it immediately
                 del tokenized_str[i+1]
             
             i += 1
 
         if separator_lvl != 0:
-            self.__throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separator Level!")
+            _throwEquationSyntaxErrorWIndex(raw_input_str, idx_offset-1, "Invalid Separator Level!")
 
         return tokenized_str    
         
@@ -239,16 +303,16 @@ class Calculator:
 
         for i in range(len(processed_input)):
             val = processed_input[i]
-            if val in operators.separators:
-                if val == operators.openSeparator:
+            if val in self.separators:
+                if val == self.openSeparator:
                     separatorLevel+=1
                 else:
                     separatorLevel-=1
                 continue
 
-            if type(val) == str and val in operators.binaryoperators.keys():
+            if type(val) == str and val in self.binaryoperators.keys():
                 # op1 is guaranteed to be updated before we see an operator
-                operator = BinaryOpNode(val, separatorLevel, i, op1)
+                operator = BinaryOpNode(val, self.binaryoperators[val]["p"], self.binaryoperators[val]["f"], separatorLevel, i, op1)
 
                 if lastBinaryOp is not None:
                     lastBinaryOp.setRightOperand(operator)
@@ -320,7 +384,7 @@ class Calculator:
         return output
 
     
-    def evaluate(self, input_str, debug: bool = False) -> float:
+    def evaluate_cleaned(self, input_str, debug: bool = False) -> float:
         tokens = self.tokenize_input_string(input_str)
         if debug:
             print(f"{tokens=}")
@@ -336,29 +400,16 @@ class Calculator:
 
         return result
 
+    def calculate(self, raw_input : str, debug: bool = False):
+        stripped = raw_input.replace(" ", "")
+        
+        # remove open/close separators, if nothing is left then error (no actual expression)
+        replaced = stripped.replace(self.openSeparator, "").replace(self.closeSeparator, "")
 
-def repl():
-    c = Calculator()
-
-    while True:
-        input_str = input("Please enter your equation>>> ")
-        stripped = input_str.replace(" ", "")\
-                .replace(operators.openSeparator, "")\
-                .replace(operators.closeSeparator, "")
-        if not stripped:
-            print("Please enter a valid non-empty expression!")
+        # no actual expression
+        if not replaced:
+            raise ValueError("Please enter a valid non-empty expression!")
         else:
-            try:
-                result = c.evaluate(input_str, debug=True)
-                print(f"Result: {result}")
+            # stripped is now guaranteed to have some actual expression
+            return self.evaluate_cleaned(stripped, debug=debug)
 
-            except SyntaxError as e:
-                print(f"Failed to parse input!: \n{e.__class__.__name__}: {e}")
-
-            except KeyboardInterrupt as e:
-                print("Exiting Program...")
-
-
-
-if __name__ == "__main__":
-    repl()

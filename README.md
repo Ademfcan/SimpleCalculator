@@ -1,5 +1,30 @@
-# randomsmallcalculator
+CustomCalc
+A small, customizable calculator for Python that lets you define your own operators, constants, and functions. Uses NumPy for math operations.
 
-A random small calculator, with support for unary and binary operations. Defined in operators.py
+Install:
+pip install customcalc
 
-Run calculator.py for a small repl
+Example:
+``` Python
+from customcalc import build_basic_calc
+# default operators/expressions
+calc = build_basic_calc()
+print(calc.calculate("1 + 2 * 3")) # 7
+print(calc.calculate("cos(pi / 3)")) # 0.5
+print(calc.calculate("3! + 4")) # 10
+
+# Custom operator example:
+from customcalc import CalculatorBuilder
+import numpy as np
+
+b = CalculatorBuilder()
+
+b.addBinaryOperator("plus", 0, np.add)
+b.addConstant("one", 1)
+b.addConstant("two", 2)
+
+calc = b.build()
+print(calc.calculate("one plus two")) # equals three
+```
+
+License: MIT
