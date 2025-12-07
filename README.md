@@ -6,7 +6,7 @@ pip install customcalc
 
 Example:
 ``` Python
-from customcalc import build_basic_calc
+from calculator import build_basic_calc
 # default operators/expressions
 calc = build_basic_calc()
 print(calc.calculate("1 + 2 * 3")) # 7
@@ -14,7 +14,7 @@ print(calc.calculate("cos(pi / 3)")) # 0.5
 print(calc.calculate("3! + 4")) # 10
 
 # Custom operator example:
-from customcalc import CalculatorBuilder
+from calculator import CalculatorBuilder
 import numpy as np
 
 b = CalculatorBuilder()
